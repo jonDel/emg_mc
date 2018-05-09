@@ -4,6 +4,7 @@ from os.path import isfile
 import numpy as np
 from keras.callbacks import ModelCheckpoint
 import keras.backend as K
+from keras import optimizers
 import cnn_shallow as cnn
 
 K.set_image_data_format('channels_last')
@@ -16,7 +17,8 @@ BEST_WEIGHTS = "best-weights_not_over.hdf5"
 
 def get_cnn_model(file_weights):
     model = cnn.CNN_semg(input_shape=(20, 10, 1), classes=53)
-    model.compile(optimizer='adam', loss='categorical_crossentropy',
+    optimizer = optimizers.RMSprop(lr=0.001, rho=0.9)
+    model.compile(optimizer=optimizer, loss='categorical_crossentropy',
                   metrics=['accuracy'])
     checkpoint = ModelCheckpoint(file_weights, verbose=1, monitor='val_acc',
                                  save_best_only=True, mode='max')
@@ -47,7 +49,7 @@ def evaluate_model(dataset, model, file_weights=None):
 
 
 if __name__ == "__main__":
-    epochs = 5
+    epochs = 20
     db1_data = cnn.get_db1_data(DB1_PATH)
     dataset = cnn.append_db1_data(db1_data)
     print (dataset['X_train'].shape)
@@ -55,7 +57,7 @@ if __name__ == "__main__":
     print (dataset['X_test'].shape)
     print (dataset['Y_test'].shape)
     print ('db1 data size: ', len(db1_data))
-    model = train_cnn(epochs, dataset)
+    model = train_cnn(epochs, dataset, BEST_WEIGHTS)
     #model, _ = get_cnn_model(BEST_WEIGHTS)
     evaluate_model(dataset, model, BEST_WEIGHTS)
     cnn.evaluate_subjs(model, db1_data, 10)

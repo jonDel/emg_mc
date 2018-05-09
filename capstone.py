@@ -24,8 +24,9 @@
 
 # In[1]:
 
-#import h5py
-from keras.callbacks import ModelCheckpoint
+import time
+from keras.callbacks import ModelCheckpoint, TensorBoard
+from keras import optimizers
 import numpy as np
 import matplotlib.pyplot as plt
 from keras.layers import Input, Add, Dense, Activation,    ZeroPadding2D, BatchNormalization, Flatten, Lambda,    Conv2D, AveragePooling2D, MaxPooling2D, GlobalMaxPooling2D,    LSTM, Dropout, Reshape, TimeDistributed, Convolution2D
@@ -179,7 +180,7 @@ def evaluate_subjs(db1_data, sub_num=None):
 # In[4]:
 
 def DeepConvLSTM(x_shape, class_number, filters, lstm_dims,
-                                learning_rate=0.01, regularization_rate=0.01,
+                                regularization_rate=0.01,
                                 metrics=['accuracy']):
     """
     Generate a model with convolution and LSTM layers.
@@ -230,10 +231,10 @@ def DeepConvLSTM(x_shape, class_number, filters, lstm_dims,
     model.add(Reshape(target_shape=(dim_length, filters[-1] * dim_channels)))
 
     for lstm_dim in lstm_dims:
+        model.add(Dropout(0.5))  # dropout before the dense layer
         model.add(LSTM(units=lstm_dim, return_sequences=True,
                        activation='tanh'))
 
-    model.add(Dropout(0.5))  # dropout before the dense layer
     # set up final dense layer such that every timestamp is given one
     # classification
     model.add(
@@ -243,10 +244,9 @@ def DeepConvLSTM(x_shape, class_number, filters, lstm_dims,
     # Final classification layer - per timestep
     model.add(Lambda(lambda x: x[:, -1, :], output_shape=[output_dim]))
 
-    model.compile(loss='categorical_crossentropy',
-                  optimizer=Adam(lr=learning_rate),
+    optimizer = optimizers.RMSprop(lr=0.001, rho=0.9)
+    model.compile(optimizer=optimizer, loss='categorical_crossentropy',
                   metrics=metrics)
-
     return model
 
 
@@ -267,14 +267,13 @@ db1_data = get_db1_data(db1_path, subject_list)
 
 #x_shape, class_number, filters, lstm_dims
 model = DeepConvLSTM((20,10,1), 53, [64]*4, [128, 64])
-#model = LSTM_semg(input_shape=(20,10,1), classes=53)
-model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'])
 # checkpoint
-#filepath="weights-improvement-{epoch:02d}-{acc:.2f}.hdf5"
-filepath="deepconvlstm_best-weights.hdf5"
-checkpoint = ModelCheckpoint(filepath, verbose=1, monitor='val_acc',
-                             save_best_only=False, mode='max')
-callbacks_list = [checkpoint]
+filepath = "weights-improvement-epoch:{epoch:02d}-acc:{acc:.2f}-val_acc:{val_acc:.2f}.hdf5"
+checkpoint = ModelCheckpoint(filepath, verbose=1, monitor='acc',
+                             save_best_only=True, mode='max')
+tensorboard = TensorBoard(log_dir="logs/{}".format(time.strftime("%d/%m/%Y--%H:%M:%S")),
+                          write_images=True)
+callbacks_list = [checkpoint, tensorboard]
 model.summary()
 
 
@@ -282,30 +281,9 @@ model.summary()
 
 # In[7]:
 
-epochs=1
-try:
-    model.load_weights("deepconvlstm_best-weights.hdf5")
-except:
-    pass
 s1 = get_db1_data(db1_path,[1])[0]
-model.fit(s1['X_train'], s1['Y_train'], epochs=epochs, batch_size=100, validation_split=0.2,
-          callbacks=callbacks_list, verbose=1)
-preds_train = model.evaluate(s1['X_train'], s1['Y_train'])
-print("Train Loss = " + str(preds_train[0]))
-print("Train Accuracy = " + str(preds_train[1]))
-# TODO: evaluate the test set using pre-trained weights (in this case, 
-# the model already uses the best weights obtained from the training phase?)
-preds_test  = model.evaluate(s1['X_test'], s1['Y_test'])
-print("Test Loss = " + str(preds_test[0]))
-print("Test Accuracy = " + str(preds_test[1]))
-
-
-# # Evaluating test set with the previously best weigths from file
-
-# In[10]:
-
 model.load_weights("deepconvlstm_best-weights.hdf5")
-preds_test  = model.evaluate(s1['X_test'], s1['Y_test'])
+preds_test = model.evaluate(s1['X_test'], s1['Y_test'])
 print("Test Loss = " + str(preds_test[0]))
 print("Test Accuracy = " + str(preds_test[1]))
 
