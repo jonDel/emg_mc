@@ -1,5 +1,7 @@
 # Create the virtual environment
 virtualenv -p python3 emg_mc_venv;cd emg_mc_venv
+# Activate the environment
+source bin/activate
 # Clone the repository
 git clone https://github.com/jonDel/emg_mc.git
 # Install the requirements
