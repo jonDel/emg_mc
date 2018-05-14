@@ -1,7 +1,9 @@
 # coding: utf-8
 import time
 import re
+import logging
 from glob import glob
+import pickle
 import numpy as np
 from keras.callbacks import ModelCheckpoint, TensorBoard
 import keras.backend as K
@@ -15,6 +17,12 @@ DB1_PATH = "../datasets/db1/"
 DB1_INFO = nh.db1_info()
 DB1_WEIGHTS_PATH = "../weights/db1/"
 WEIGHTS_PATTERN = "epoch:{epoch:02d}-acc:{acc:.2f}-val_acc:{val_acc:.2f}.hdf5"
+logger = logging.getLogger('deepconvlstm')
+hdlr = logging.FileHandler('deepconvlstm.log')
+formatter = logging.Formatter('%(asctime)s %(levelname)s %(message)s')
+hdlr.setFormatter(formatter)
+logger.addHandler(hdlr)
+logger.setLevel(logging.DEBUG)
 
 
 def best_weight(folder, metric, filehead):
@@ -155,30 +163,41 @@ def prepare_data(subject, timesteps_number, inc_len, train_split, select_classes
 
 
 if __name__ == "__main__":
-    subject_number = 4
     timestep_num = 20
     inc_len = 100
-    epochs = 400
+    epochs = 100
     train_split = 3
     classes = 53
     w_folder = DB1_WEIGHTS_PATH
-    sub_data = prepare_data(subject_number, timestep_num, inc_len, train_split)
-    input_shape = sub_data[0].shape
-    model, callbacks_list = get_deepconvlstm(input_shape[1:], subject_number, classes)
-    model.summary()
-    res = load_pretrained(model, w_folder, 'val_acc', subject_number)
-    if res[0]:
-        print ('Using pre-trained weights...')
-        model = res[0]
-        initial_epoch = res[1]
-    else:
-        initial_epoch = 0
-    model.fit(sub_data[0], sub_data[1], epochs=epochs, batch_size=100,
-              validation_split=0.2, callbacks=callbacks_list, verbose=1,
-              initial_epoch=initial_epoch)
-    preds_train = model.evaluate(sub_data[0], sub_data[1])
-    print("Train Loss = " + str(preds_train[0]))
-    print("Train Accuracy = " + str(preds_train[1]))
-    preds_test = model.evaluate(sub_data[2], sub_data[3])
-    print("Test Loss = " + str(preds_test[0]))
-    print("Test Accuracy = " + str(preds_test[1]))
+    logger.info('Starting training process...')
+    logger.info('epochs:{}, timesteps_number:{}, step_len:{} ms'.
+                format(epochs, timestep_num, inc_len))
+    for subject_number in range(1, classes+1):
+        logger.info('Running training for subject {}...'.format(subject_number))
+        sub_data = prepare_data(subject_number, timestep_num, inc_len, train_split)
+        input_shape = sub_data[0].shape
+        model, callbacks_list = get_deepconvlstm(input_shape[1:], subject_number, classes)
+        model.summary()
+        res = load_pretrained(model, w_folder, 'val_acc', subject_number)
+        if res[0]:
+            initial_epoch = res[1]
+            logger.debug('Using pre-trained weights... resuming from epoch {}'.
+                         format(initial_epoch))
+            model = res[0]
+        else:
+            initial_epoch = 0
+        hist = model.fit(sub_data[0], sub_data[1], epochs=epochs, batch_size=100,
+                         validation_split=0.1, callbacks=callbacks_list, verbose=1,
+                         initial_epoch=initial_epoch)
+        wfile, epoch = best_weight(DB1_WEIGHTS_PATH, 'val_acc', 'subject:{}'.
+                                   format(subject_number))
+        logger.debug('Best results from epoch {}, saved in file {}'.
+                     format(epoch, wfile))
+        logger.debug('Saving history in a picke file...')
+        filehistname = '../history/db1/subject:{}_history.pickle'.format(subject_number)
+        with open(filehistname, 'wb') as fname:
+            pickle.dump(hist.history, fname)
+        preds_train = model.evaluate(sub_data[0], sub_data[1])
+        logger.info("Train Accuracy = " + str(preds_train[1]))
+        preds_test = model.evaluate(sub_data[2], sub_data[3])
+        logger.info("Test Accuracy = " + str(preds_test[1]))
