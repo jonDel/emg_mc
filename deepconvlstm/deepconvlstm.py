@@ -1,7 +1,7 @@
 # coding: utf-8
 # # Developing the project especified in the proposal
-# 
-# - Layer 1: input layer - Dimensions: D (number of sensors or channels) X 400 (number of samples)
+# - Dataset 1 Layer 1: input layer - Dimensions: D (number of channels) X 20 (number of samples)
+# - Datasets 2,3 Layer 1: input layer - Dimensions: D (number of channels) X 400 (number of samples)
 # - for dataset 1: D=10; for dataset 2 and 3: D=12
 # - Layer 2: Convolutional layer 64
 # - Layer 3: Convolutional layer 64
@@ -11,7 +11,7 @@
 # - Layer 6: Dense layer LSTM 128
 # - Dropout
 # - Layer 7: Dense layer LSTM 64
-# - Layer 8: Softmax layer 50 classes
+# - Layer 8: Softmax layer 53 classes
 # - RMSProp update rule
 # - mini batch gradient descent - size=100, learning rate=0.001, decay factor=0.9
 # - dropout: p=0.5
@@ -59,9 +59,11 @@ def model_deepconvlstm(x_shape, **kwargs):
             weights initialization function
         lstm_activation (:obj:`str`,optional, *default* ="tanh"):
             lstm layers activation function
+
     Returns
         model (:obj`object`):
             The compiled Keras model
+
     """
     def_args = {
         'class_number': 53,
