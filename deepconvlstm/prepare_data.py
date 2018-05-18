@@ -5,7 +5,7 @@ import logging
 from glob import glob
 import pickle
 import numpy as np
-from keras.callbacks import ModelCheckpoint, TensorBoard, EarlyStopping
+from keras.callbacks import ModelCheckpoint, TensorBoard, EarlyStopping, ReduceLROnPlateau
 import keras.backend as K
 import nina_helper as nh
 import deepconvlstm as dcl
@@ -14,6 +14,7 @@ K.set_image_data_format('channels_last')
 K.set_learning_phase(1)
 np.random.seed(1)
 BATCH_SIZE = 16
+LEARN_RATE = 0.001
 DATASETS_DICT = {
     "dataset_1": {
         "dataset_path": "../datasets/db1/",
@@ -137,7 +138,9 @@ def get_deepconvlstm(input_shape, subject, class_number, dataset, monitor='val_a
         time.strftime("%d/%m/%Y--%H:%M:%S")),
                               write_images=True)
     early_stopping = EarlyStopping(monitor='val_acc', patience=20, verbose=1)
-    callbacks_list = [checkpoint, tensorboard, early_stopping]
+    reduce_lr = ReduceLROnPlateau(monitor='val_acc', factor=0.2,
+                                  patience=5, min_lr=0.001)
+    callbacks_list = [checkpoint, tensorboard, early_stopping, reduce_lr]
     return (model, callbacks_list)
 
 
@@ -194,21 +197,19 @@ if __name__ == "__main__":
     inc_len = 100
     epochs = 100
     train_split = 3
-    classes = 53
-    LEARN_RATE = 0.001
     dataset = "dataset_1"
+    classes = DATASETS_DICT[dataset]["dataset_info"]["nb_moves"]
     w_folder = DATASETS_DICT[dataset]["weights_path"]
     logger.info('Starting training process...')
     logger.info('Epochs:{}, timesteps_number:{}, step_len:{} ms, batch size:{} samples'.
                 format(epochs, timestep_num, inc_len, BATCH_SIZE))
-    for subject_number in range(1, classes+1):
+    for subject_number in range(1, DATASETS_DICT[dataset]["dataset_info"]["nb_subjects"]+1):
         logger.info('Running training for subject {}...'.format(subject_number))
         sub_data = prepare_data(subject_number, timestep_num, inc_len, train_split,
                                 dataset)
         input_shape = sub_data[0].shape
         model, callbacks_list = get_deepconvlstm(input_shape[1:], subject_number,
                                                  classes, dataset)
-        model.summary()
         res = load_pretrained(model, w_folder, 'val_acc', subject_number)
         if res[0]:
             initial_epoch = res[1]
