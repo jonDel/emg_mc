@@ -21,21 +21,30 @@ DATASETS_DICT = {
         "weights_path": "../weights/db1_batchsize"+str(BATCH_SIZE)+"/",
         "log_dir": "../logs/db1_batchsize"+str(BATCH_SIZE)+"/",
         "import_func": nh.import_db1,
-        "dataset_info": nh.db1_info()
+        "dataset_info": nh.db1_info(),
+        "history_path": "../history/db1/",
+        "ts_number": 20,
+        "train_split": 3
     },
     "dataset_2": {
         "dataset_path": "../datasets/db2/",
-        "weights_path": "../weights/db2/_batchsize"+str(BATCH_SIZE)+"/",
+        "weights_path": "../weights/db2_batchsize"+str(BATCH_SIZE)+"/",
         "log_dir": "../logs/db2_batchsize"+str(BATCH_SIZE)+"/",
         "import_func": nh.import_db2,
-        "dataset_info": nh.db2_info()
+        "dataset_info": nh.db2_info(),
+        "history_path": "../history/db2_batchsize"+str(BATCH_SIZE)+"/",
+        "ts_number": 400,
+        "train_split": 2
     },
     "dataset_3": {
         "dataset_path": "../datasets/db3/",
         "weights_path": "../weights/db3_batchsize"+str(BATCH_SIZE)+"/",
         "log_dir": "../logs/db3_batchsize"+str(BATCH_SIZE)+"/",
-        "import_func": None,
-        "dataset_info": None
+        "import_func": nh.import_db3,
+        "dataset_info": nh.db3_info(),
+        "history_path": "../history/db3/",
+        "ts_number": 400,
+        "train_split": 2
     },
 }
 WEIGHTS_PATTERN = "epoch:{epoch:02d}-acc:{acc:.2f}-val_acc:{val_acc:.2f}.hdf5"
@@ -182,23 +191,35 @@ def prepare_data(subject, timesteps_number, inc_len, train_split, dataset, selec
     x_all, y_all, r_all = nh.get_windows(reps, timesteps_number, int(inc_len/10),
                                          emg_data, subject_dict['move'],
                                          subject_dict['rep'],
-                                         which_moves=select_classes)
+                                         which_moves=select_classes,
+                                         dtype=np.float16)
     train_idx = nh.get_idxs(r_all, train_reps[0, :])
     test_idx = nh.get_idxs(r_all, test_reps[0, :])
-    y_train = nh.to_categorical(y_all[train_idx])
+    y_train = y_all[train_idx]
+    y_test = y_all[test_idx]
+    # Preparing data for one hot categorical
+    if select_classes:
+        for idx, val in enumerate(select_classes):
+            y_train[y_train == val] = idx
+            y_test[y_test == val] = idx
+    y_train = nh.to_categorical(y_train)
     x_train = x_all[train_idx, :, :, :]
-    y_test = nh.to_categorical(y_all[test_idx])
+    y_test = nh.to_categorical(y_test)
     x_test = x_all[test_idx, :, :, :]
     return (x_train, y_train, x_test, y_test)
 
 
 if __name__ == "__main__":
-    timestep_num = 20
     inc_len = 100
-    epochs = 100
-    train_split = 3
+    epochs = 150
     dataset = "dataset_1"
+    timestep_num = DATASETS_DICT[dataset]["ts_number"]
+    train_split = DATASETS_DICT[dataset]["train_split"]
     classes = DATASETS_DICT[dataset]["dataset_info"]["nb_moves"]
+    # Moves 1, 2, 3, 4, 5, 6, 7, 8, 11, 12 from exercise A and 5 and 7 from exercise B
+    # Source: (https://www.nature.com/articles/sdata201453)
+    #moves = [1, 2, 3, 4, 5, 6, 7, 8, 11, 12, 17, 19]
+    moves = None
     w_folder = DATASETS_DICT[dataset]["weights_path"]
     logger.info('Starting training process...')
     logger.info('Epochs:{}, timesteps_number:{}, step_len:{} ms, batch size:{} samples'.
@@ -206,7 +227,7 @@ if __name__ == "__main__":
     for subject_number in range(1, DATASETS_DICT[dataset]["dataset_info"]["nb_subjects"]+1):
         logger.info('Running training for subject {}...'.format(subject_number))
         sub_data = prepare_data(subject_number, timestep_num, inc_len, train_split,
-                                dataset)
+                                dataset, moves)
         input_shape = sub_data[0].shape
         model, callbacks_list = get_deepconvlstm(input_shape[1:], subject_number,
                                                  classes, dataset)
@@ -226,7 +247,7 @@ if __name__ == "__main__":
         logger.debug('Best results from epoch {}, saved in file {}'.
                      format(epoch, wfile))
         logger.debug('Saving history in a picke file...')
-        filehistname = "../history/db1_batchsize"+str(BATCH_SIZE) +\
+        filehistname = DATASETS_DICT[dataset]["history_path"] +\
             "/subject:{}_history.pickle".format(subject_number)
         with open(filehistname, 'wb') as fname:
             pickle.dump(hist.history, fname)
