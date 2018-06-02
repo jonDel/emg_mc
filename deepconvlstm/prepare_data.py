@@ -4,6 +4,7 @@ import re
 import logging
 from glob import glob
 import pickle
+from pathlib import Path
 import numpy as np
 from keras.callbacks import ModelCheckpoint, TensorBoard, EarlyStopping, ReduceLROnPlateau
 import keras.backend as K
@@ -13,7 +14,7 @@ import deepconvlstm as dcl
 K.set_image_data_format('channels_last')
 K.set_learning_phase(1)
 np.random.seed(1)
-BATCH_SIZE = 16
+BATCH_SIZE = 40
 LEARN_RATE = 0.001
 DATASETS_DICT = {
     "dataset_1": {
@@ -23,7 +24,7 @@ DATASETS_DICT = {
         "import_func": nh.import_db1,
         "dataset_info": nh.db1_info(),
         "history_path": "../history/db1/",
-        "ts_number": 20,
+        "ts_number": 10,
         "train_split": 3
     },
     "dataset_2": {
@@ -47,7 +48,7 @@ DATASETS_DICT = {
         "train_split": 2
     },
 }
-WEIGHTS_PATTERN = "epoch:{epoch:02d}-acc:{acc:.2f}-val_acc:{val_acc:.2f}.hdf5"
+WEIGHTS_PATTERN = "epoch:{epoch:02d}-acc:{acc:.4f}-val_acc:{val_acc:.4f}.hdf5"
 logger = logging.getLogger("deepconvlstm_batchsize"+str(BATCH_SIZE))
 hdlr = logging.FileHandler("deepconvlstm_batchsize"+str(BATCH_SIZE)+".log")
 formatter = logging.Formatter('%(asctime)s %(levelname)s %(message)s')
@@ -76,7 +77,7 @@ def best_weight(folder, metric, filehead):
     if not weights_list:
         return (False, None)
     b_weight = weights_list[0]
-    reg = re.compile('-'+metric+':(\d.\d{2})')
+    reg = re.compile('-'+metric+':(\d.\d{4})')
     try:
         for filename in weights_list:
             res = reg.search(filename)
@@ -209,22 +210,24 @@ def prepare_data(subject, timesteps_number, inc_len, train_split, dataset, selec
     return (x_train, y_train, x_test, y_test)
 
 
-if __name__ == "__main__":
-    inc_len = 100
-    epochs = 150
-    dataset = "dataset_1"
-    timestep_num = DATASETS_DICT[dataset]["ts_number"]
-    train_split = DATASETS_DICT[dataset]["train_split"]
-    classes = DATASETS_DICT[dataset]["dataset_info"]["nb_moves"]
-    # Moves 1, 2, 3, 4, 5, 6, 7, 8, 11, 12 from exercise A and 5 and 7 from exercise B
-    # Source: (https://www.nature.com/articles/sdata201453)
-    #moves = [1, 2, 3, 4, 5, 6, 7, 8, 11, 12, 17, 19]
-    moves = None
-    w_folder = DATASETS_DICT[dataset]["weights_path"]
+def run_trainning(dataset, inc_len, epochs, moves=None):
+    ds_dict = DATASETS_DICT[dataset]
+    Path(ds_dict['weights_path']).mkdir(parents=True, exist_ok=True)
+    Path(ds_dict['log_dir']).mkdir(parents=True, exist_ok=True)
+    Path(ds_dict['history_path']).mkdir(parents=True, exist_ok=True)
+    timestep_num = ds_dict["ts_number"]
+    train_split = ds_dict["train_split"]
+    try:
+        classes = ds_dict["dataset_info"]["nb_moves"] if not moves else len(moves)
+    except KeyError:
+        classes = None
+    w_folder = ds_dict["weights_path"]
     logger.info('Starting training process...')
     logger.info('Epochs:{}, timesteps_number:{}, step_len:{} ms, batch size:{} samples'.
                 format(epochs, timestep_num, inc_len, BATCH_SIZE))
-    for subject_number in range(1, DATASETS_DICT[dataset]["dataset_info"]["nb_subjects"]+1):
+    for subject_number in range(1, ds_dict["dataset_info"]["nb_subjects"]+1):
+        if not classes:
+            classes = ds_dict["dataset_info"]['subjects'][subject_number-1]["nb_moves"]
         logger.info('Running training for subject {}...'.format(subject_number))
         sub_data = prepare_data(subject_number, timestep_num, inc_len, train_split,
                                 dataset, moves)
@@ -247,7 +250,7 @@ if __name__ == "__main__":
         logger.debug('Best results from epoch {}, saved in file {}'.
                      format(epoch, wfile))
         logger.debug('Saving history in a picke file...')
-        filehistname = DATASETS_DICT[dataset]["history_path"] +\
+        filehistname = ds_dict["history_path"] +\
             "/subject:{}_history.pickle".format(subject_number)
         with open(filehistname, 'wb') as fname:
             pickle.dump(hist.history, fname)
@@ -255,3 +258,12 @@ if __name__ == "__main__":
         logger.info("Train Accuracy = " + str(preds_train[1]))
         preds_test = model.evaluate(sub_data[2], sub_data[3])
         logger.info("Test Accuracy = " + str(preds_test[1]))
+
+
+if __name__ == "__main__":
+    inc_len = 100
+    epochs = 150
+    run_trainning('dataset_1', inc_len, epochs)
+    for dataset in DATASETS_DICT.keys():
+        run_trainning(dataset, inc_len, epochs)
+
