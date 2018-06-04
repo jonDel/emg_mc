@@ -14,7 +14,7 @@ import deepconvlstm as dcl
 K.set_image_data_format('channels_last')
 K.set_learning_phase(1)
 np.random.seed(1)
-BATCH_SIZE = 40
+BATCH_SIZE = 16
 LEARN_RATE = 0.001
 DATASETS_DICT = {
     "dataset_1": {
@@ -24,7 +24,7 @@ DATASETS_DICT = {
         "import_func": nh.import_db1,
         "dataset_info": nh.db1_info(),
         "history_path": "../history/db1/",
-        "ts_number": 10,
+        "ts_number": 400,
         "train_split": 3
     },
     "dataset_2": {
