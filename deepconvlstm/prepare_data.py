@@ -34,7 +34,7 @@ DATASETS_DICT = {
         "import_func": nh.import_db2,
         "dataset_info": nh.db2_info(),
         "history_path": "../history/db2_batchsize"+str(BATCH_SIZE)+"/",
-        "ts_number": 400,
+        "ts_number": 1000,
         "train_split": 2
     },
     "dataset_3": {
@@ -44,7 +44,7 @@ DATASETS_DICT = {
         "import_func": nh.import_db3,
         "dataset_info": nh.db3_info(),
         "history_path": "../history/db3/",
-        "ts_number": 400,
+        "ts_number": 1000,
         "train_split": 2
     },
 }
@@ -154,7 +154,8 @@ def get_deepconvlstm(input_shape, subject, class_number, dataset, monitor='val_a
     return (model, callbacks_list)
 
 
-def prepare_data(subject, timesteps_number, inc_len, train_split, dataset, select_classes=None):
+def prepare_data(subject, timesteps_number, inc_len, train_split, dataset,
+                 subsamp_rate=1, select_classes=None):
     """Get data from dataset and assemble as 4D input tensor for a keras model.
 
     Arguments:
@@ -166,6 +167,8 @@ def prepare_data(subject, timesteps_number, inc_len, train_split, dataset, selec
         train_split (:obj:`int`): 1-10, proportion of test-train split, based on
             number of repetitions (10) Ex: 3 indicates 30% of test samples
         dataset (:obj:`str`): dataset number: dataset_1, dataset_2 or dataset_3
+        subsamp_rate (:obj:`int`, *default* =1): subsample rate. Ex: 2 indicates
+            that all dataset will be subsampled to a half
         select_classes (:obj:`list`,optional, *default* =None): If given, the classes
             used for the classifier will be only these ones; else, all classes
 
@@ -183,15 +186,16 @@ def prepare_data(subject, timesteps_number, inc_len, train_split, dataset, selec
     # Create a balanced test - training split based on repetition number
     train_reps, test_reps = nh.gen_split_balanced(reps, train_split)
     # Normalise EMG data based on training set
-    emg_data = nh.normalise_emg(subject_dict['emg'], subject_dict['rep'],
+    emg_data = nh.normalise_emg(subject_dict['emg'][::subsamp_rate],
+                                subject_dict['rep'][::subsamp_rate],
                                 train_reps[0, :])
     # Window data: x_all data is 4D tensor [observation, time_step, channel, 1]
     # for use with Keras
     # y_all: movement label, length: number of windows
     # r_all: repetition label, length: number of windows
     x_all, y_all, r_all = nh.get_windows(reps, timesteps_number, int(inc_len/10),
-                                         emg_data, subject_dict['move'],
-                                         subject_dict['rep'],
+                                         emg_data, subject_dict['move'][::subsamp_rate],
+                                         subject_dict['rep'][::subsamp_rate],
                                          which_moves=select_classes,
                                          dtype=np.float16)
     train_idx = nh.get_idxs(r_all, train_reps[0, :])
@@ -210,7 +214,7 @@ def prepare_data(subject, timesteps_number, inc_len, train_split, dataset, selec
     return (x_train, y_train, x_test, y_test)
 
 
-def run_trainning(dataset, inc_len, epochs, moves=None):
+def run_trainning(dataset, inc_len, epochs, subsamp_rate, moves=None):
     ds_dict = DATASETS_DICT[dataset]
     Path(ds_dict['weights_path']).mkdir(parents=True, exist_ok=True)
     Path(ds_dict['log_dir']).mkdir(parents=True, exist_ok=True)
@@ -228,9 +232,10 @@ def run_trainning(dataset, inc_len, epochs, moves=None):
     for subject_number in range(1, ds_dict["dataset_info"]["nb_subjects"]+1):
         if not classes:
             classes = ds_dict["dataset_info"]['subjects'][subject_number-1]["nb_moves"]
+        print ('Subject {}, number of classes: {}'.format(subject_number, classes))
         logger.info('Running training for subject {}...'.format(subject_number))
         sub_data = prepare_data(subject_number, timestep_num, inc_len, train_split,
-                                dataset, moves)
+                                dataset, subsamp_rate, moves)
         input_shape = sub_data[0].shape
         model, callbacks_list = get_deepconvlstm(input_shape[1:], subject_number,
                                                  classes, dataset)
@@ -242,6 +247,7 @@ def run_trainning(dataset, inc_len, epochs, moves=None):
             model = res[0]
         else:
             initial_epoch = 0
+        model.summary()
         hist = model.fit(sub_data[0], sub_data[1], epochs=epochs, batch_size=BATCH_SIZE,
                          validation_split=0.33, callbacks=callbacks_list, verbose=1,
                          initial_epoch=initial_epoch)
@@ -261,9 +267,11 @@ def run_trainning(dataset, inc_len, epochs, moves=None):
 
 
 if __name__ == "__main__":
-    inc_len = 100
+    inc_len = 200
     epochs = 150
-    run_trainning('dataset_1', inc_len, epochs)
+    subsamp_rate = 20
     for dataset in DATASETS_DICT.keys():
-        run_trainning(dataset, inc_len, epochs)
+        if dataset == 'dataset_1':
+            subsamp_rate = 1
+        run_trainning(dataset, inc_len, epochs, subsamp_rate)
 

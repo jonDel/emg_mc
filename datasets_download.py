@@ -16,7 +16,7 @@ PATHS = ['datasets/db1', 'datasets/db2', 'datasets/db3']
 
 def get_filelinks(url=MAIN_URL):
     '''Get links for downloading subjects zip files'''
-    main_page = requests.get(url, verify=False).text
+    main_page = requests.get(url).text
     all_links = re.findall("(/bitstream/handle/.+?\.zip)", main_page)
     db1_links = [HOST+filelink for filelink in all_links if 'DB1' in filelink]
     db2_links = [HOST+filelink for filelink in all_links if 'DB2' in filelink]
@@ -28,7 +28,7 @@ def get_file(url, path):
     start_time = time.time()
     local_filename = url.split('/')[-1]
     print('Starting download of file {}...'.format(local_filename))
-    r = requests.get(url, stream=True, verify=False)
+    r = requests.get(url, stream=True)
     with open(path+'/'+local_filename, 'wb') as mfile:
         shutil.copyfileobj(r.raw, mfile)
     print(local_filename + " took " + str(time.time() - start_time) + " seconds")
@@ -46,8 +46,15 @@ def extract_zips(zipfilename, path):
         parts = mats.split('/')
         to_rmpath = '/'.join(parts[:-1])
         shutil.move(mats, '{}/{}'.format(path, parts[-1]))
-    shutil.rmtree(to_rmpath)
-    os.remove(zipfilename)
+    if to_rmpath != path:
+        try:
+            shutil.rmtree(to_rmpath)
+        except Exception as error:
+            print ('Error while removing path {}: {}'.format(to_rmpath, error))
+    try:
+        os.remove(zipfilename)
+    except Exception as error:
+        print('Error while removing zip file {}: {}'.format(zipfilename, error))
 
 
 def download_dbs(paths=PATHS):
