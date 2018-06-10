@@ -20,7 +20,7 @@
 import numpy as np
 from keras import optimizers
 from keras.layers import Dense, Activation, BatchNormalization, Lambda, LSTM,\
-    Dropout, Reshape, TimeDistributed, Convolution2D
+    Dropout, Reshape, TimeDistributed, Convolution2D, CuDNNLSTM
 from keras.models import Sequential
 from keras.regularizers import l2
 import keras.backend as K
@@ -28,6 +28,7 @@ import keras.backend as K
 K.set_image_data_format('channels_last')
 K.set_learning_phase(1)
 np.random.seed(1)
+HAS_GPU = K.tensorflow_backend._get_available_gpus()
 
 
 def model_deepconvlstm(x_shape, **kwargs):
@@ -98,8 +99,11 @@ def model_deepconvlstm(x_shape, **kwargs):
     model.add(Reshape(target_shape=(dim_length, def_args['filters'][-1] * dim_channels)))
     for lstm_dim in def_args['lstm_dims']:
         model.add(Dropout(def_args['dropout_prob']))  # dropout before the dense layer
-        model.add(LSTM(units=lstm_dim, return_sequences=True,
-                       activation=def_args['lstm_activation']))
+        if HAS_GPU:
+            model.add(CuDNNLSTM(units=lstm_dim, return_sequences=True))
+        else:
+            model.add(LSTM(units=lstm_dim, return_sequences=True,
+                           activation=def_args['lstm_activation']))
     # set up final dense layer such that every timestamp is given one
     # classification
     model.add(
