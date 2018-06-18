@@ -52,3 +52,4 @@ traitlets==4.3.2
 urllib3==1.23
 wcwidth==0.1.7
 Werkzeug==0.14.1
+git+git://github.com/jonDel/nina_helper_package_mk2@db3
