@@ -3,6 +3,7 @@ import time
 import re
 import os
 import logging
+from copy import deepcopy
 from glob import glob
 import pickle
 from pathlib import Path
@@ -19,11 +20,11 @@ LOGGER = logging.getLogger("deepconvlstm")
 DATABASES_DICT = {
     "database_1": {
         "database_path": "databases/db1/",
-        "weights_path": "results/weights/db1/ts200/",
+        "weights_path": "results/weights/db1/",
         "log_dir": "results/logs/db1/",
         "import_func": nh.import_db1,
         "database_info": nh.db1_info(),
-        "history_path": "results/history/db1/ts200",
+        "history_path": "results/history/db1/",
         "window_factor": 0.1,
         "subsamp_rate": 1,
         "train_split": 3
@@ -116,14 +117,14 @@ class DeepConvLstm(object):
             sig_dig (:obj:`int`, optional, *default* =4): number of significant digits
                 of metric to use when writing the model trained weights
             monitor (:obj:`str`, optional, *default* =val_acc): metric to monitor in callback
-            databases_dict: (:obj:`dict`, optional, *default* =DATABASES_DICT): dictionary
-                containing useful information about the databases (see DATABASES_DICT in
+            db_dict: (:obj:`dict`, optional, *default* =DATABASES_DICT[database]): dictionary
+                containing useful information about the database (see DATABASES_DICT in
                 this module for reference)
             timeback_reach (:obj:`float`): how many move durations far back the lstm
                 cells will look into the past. Ex: 1.25 means 1.25*8 (move duration) =
                 10 seconds back into the past
             epochs (:obj:`int`, optional, *default* =150): number of epochs for training
-            base_path (:obj:`int`, optional, *default* =current dir): base path for writing
+            base_path (:obj:`str`, optional, *default* =current dir): base path for writing
                 results
             obs_window (:obj:`int`, optional, *default* =200): size of the window time,
                 in miliseconds, where each classification will take place
@@ -134,8 +135,9 @@ class DeepConvLstm(object):
         def_args = {
             "batch_size": 16,
             "learn_rate": 0.001,
-            "databases_dict": DATABASES_DICT,
+            "db_dict": deepcopy(DATABASES_DICT[database]),
             "sig_dig": 4,
+            "epochs": 150,
             "obs_window": 200,
             "timeback_reach": 1.25,
             "monitor": "val_acc",
@@ -146,7 +148,6 @@ class DeepConvLstm(object):
         args = def_args.keys()
         def_args.update(kwargs)
         self.__dict__.update((key, val) for key, val in def_args.items() if key in args)
-        self.db_dict = self.databases_dict[database]
         if self.moves:
             self.n_classes = len(self.moves)
         else:
@@ -276,7 +277,7 @@ class DeepConvLstm(object):
         w_folder = self.db_dict["weights_path"]
         LOGGER.info("Starting training process...")
         LOGGER.info("Epochs:{}, timesteps_number:{}, step_len:{} ms, batch size:{} samples".
-                    format(self.epochs, self.timestep_num, self.obs_window, self.batch_size))
+                    format(self.epochs, self.timesteps_number, self.obs_window, self.batch_size))
         LOGGER.info("Subject {}, number of classes: {}".format(self.subject, self.n_classes))
         LOGGER.info("Running training for subject {}...".format(self.subject))
         sub_data = self.prepare_data()
@@ -321,7 +322,6 @@ def run_dbtraining(database):
     LOGGER.info("Starting training process for entire database {}...".format(database))
     for subject_number in range(1, db_dict["database_info"]["nb_subjects"]+1):
         deepconv = DeepConvLstm(subject_number, database)
-        deepconv.prepare_data()
         deepconv.run_training()
 
 
