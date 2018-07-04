@@ -6,14 +6,14 @@ import sys
 import os
 
 CWD = os.getcwd()
-HIST_PATH = CWD+'/results/history/db1/ts200/'
+HIST_PATH = CWD + "/results/history/db1/ts200/"
 
 
 def plot_result(subject, path):
     """
     Plot the training/validation curves for a subject.
 
-    It supposes pickle history files written to a given path.
+    It supposes pickle history files written in a given folder.
 
     Parameters:
         subject (:obj:`int`): subject number
