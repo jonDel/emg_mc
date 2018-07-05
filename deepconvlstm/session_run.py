@@ -142,7 +142,7 @@ class DeepConvLstm(object):
             "timeback_reach": 1.25,
             "monitor": "val_acc",
             "base_path": os.getcwd(),
-            "subsamp_rate": DATABASES_DICT[database]["subsamp_rate"],
+            "subsamp_rate": deepcopy(DATABASES_DICT[database]["subsamp_rate"]),
             "moves": None
             }
         args = def_args.keys()
