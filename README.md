@@ -1,4 +1,4 @@
-# Machine learning for classifing EMG signals
+# Deep learning for classifing sEMG signals
 
 ## Installation
 
