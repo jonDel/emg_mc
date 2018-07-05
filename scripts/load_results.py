@@ -15,6 +15,11 @@ subject_number = int(sys.argv[1])
 database = sys.argv[2]
 print ("Evaluating subject {} from database {}...".format(subject_number, database))
 deepconv = session_run.DeepConvLstm(subject_number, database)
+if database == "database_1":
+    deepconv.db_dict["weights_path"] = deepconv.db_dict["weights_path"] + "/ts200/"
+else:
+    deepconv.db_dict["weights_path"] = deepconv.db_dict["weights_path"] + "/ts1250/"
+
 sub_data = deepconv.prepare_data()
 input_shape = sub_data[0].shape
 dcl_model, _ = deepconv.get_model(input_shape[1:])
