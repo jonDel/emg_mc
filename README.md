@@ -1,5 +1,11 @@
 # Deep learning for classifing sEMG signals
 
+## Requirements
+The following packages must be installed:
+- python3.5 or greater
+- gcc
+- Python headers (python3-dev for debian and python3-devel for RedHat)
+
 ## Installation
 
 ### Cloning repository
