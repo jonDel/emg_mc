@@ -2,12 +2,13 @@
 import numpy as np
 from keras import optimizers
 from keras.layers import Dense, Activation, BatchNormalization, Lambda, LSTM,\
-    Dropout, Reshape, TimeDistributed, Convolution2D, CuDNNLSTM
+    Dropout, Reshape, TimeDistributed, Convolution2D
 from keras.models import Sequential
 from keras.regularizers import l2
 import keras.backend as K
+import tensorflow as tf
 
-HAS_GPU = K.tensorflow_backend._get_available_gpus()
+HAS_GPU = bool(tf.test.gpu_device_name())
 
 
 def model_deepconvlstm(x_shape, **kwargs):
@@ -81,7 +82,7 @@ def model_deepconvlstm(x_shape, **kwargs):
     for lstm_dim in def_args['lstm_dims']:
         model.add(Dropout(def_args['dropout_prob']))  # dropout before the dense layer
         if HAS_GPU:
-            model.add(CuDNNLSTM(units=lstm_dim, return_sequences=True))
+            model.add(LSTM(units=lstm_dim, return_sequences=True))
         else:
             model.add(LSTM(units=lstm_dim, return_sequences=True,
                            activation=def_args['lstm_activation']))
