@@ -259,6 +259,7 @@ class DeepConvLstm(object):
                                      save_best_only=True, mode="max")
         tensorboard = TensorBoard(log_dir=self.db_dict["log_dir"]+"{}".format(
                                   time.strftime("%d/%m/%Y--%H:%M:%S")),
+                                  profile_batch=0,
                                   write_images=True)
         early_stopping = EarlyStopping(monitor=self.monitor, patience=20, verbose=1)
         reduce_lr = ReduceLROnPlateau(monitor=self.monitor, factor=0.2,
