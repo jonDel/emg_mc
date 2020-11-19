@@ -10,4 +10,5 @@ setup(name='deepconvlstm',
       author_email='jdellagostin@gmail.com',
       license='MIT',
       packages=find_packages(),
-      keywords='ninapro emg deep-learning machine-learning lstm')
+      keywords='ninapro emg deep-learning machine-learning lstm'
+)

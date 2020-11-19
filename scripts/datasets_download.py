@@ -80,6 +80,27 @@ def extract_zips(zipfilename, path):
         print("Error while removing zip file {}: {}".format(zipfilename, error))
 
 
+def download_subject(subject, database, paths=PATHS):
+    """Download and extract one subject zipped file.
+
+    Parameters:
+        subject (:obj:`int`): subject number
+        database (:obj:`int`): database number (1, 2 or 3)
+        paths (:obj:`str`, optional, *default* =PATHS): path to the folders
+            each database datasets will be downloaded and extracted
+
+    """
+    pathlib.Path(PATHS[database-1]).mkdir(parents=True, exist_ok=True)
+    main_page = requests.get(MAIN_URL).text
+    match = re.search('(\/stash\/downloads\/file_stream\/\d+)">DB{}_s{}.zip'.
+            format(database, subject), main_page)
+    link = HOST + match.groups()[0]
+    start_time = time.time()
+    get_file(link, PATHS[database-1])
+    print("\nDownloaded subject {} from database {} took {} seconds.".
+              format(subject, database, time.time() - start_time))
+
+
 def download_dbs(paths=PATHS):
     """Download and extract all subjects zipped files.
 
