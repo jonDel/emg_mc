@@ -58,7 +58,7 @@ def best_weight(folder, metric, filehead, sig_dig, file_pattern=None):
     """Return best weight based on metric.
 
     The weights file is supposed to be written similarly to
-    weights--subject:1--epoch:11-acc:0.5971-val_acc:0.4687.hdf5
+    weights--subject:1--epoch:11-accuracy:0.5971-val_accuracy:0.4687.hdf5
 
     Arguments:
         folder (:obj:`str`): path of weight's folder
@@ -116,7 +116,7 @@ class DeepConvLstm(object):
             batch_size (:obj:`int`, optional, *default* =16): training's batch size
             sig_dig (:obj:`int`, optional, *default* =4): number of significant digits
                 of metric to use when writing the model trained weights
-            monitor (:obj:`str`, optional, *default* =val_acc): metric to monitor in callback
+            monitor (:obj:`str`, optional, *default* =val_accuracy): metric to monitor in callback
             db_dict: (:obj:`dict`, optional, *default* =DATABASES_DICT[database]): dictionary
                 containing useful information about the database (see DATABASES_DICT in
                 this module for reference)
@@ -140,7 +140,7 @@ class DeepConvLstm(object):
             "epochs": 150,
             "obs_window": 200,
             "timeback_reach": 1.25,
-            "monitor": "val_acc",
+            "monitor": "val_accuracy",
             "base_path": os.getcwd(),
             "subsamp_rate": deepcopy(DATABASES_DICT[database]["subsamp_rate"]),
             "moves": None
@@ -166,9 +166,8 @@ class DeepConvLstm(object):
         self.db_dict["weights_path"] = self.base_path + '/' + self.db_dict["weights_path"]
         self.db_dict["log_dir"] = self.base_path + '/' + self.db_dict["log_dir"]
         self.db_dict["history_path"] = self.base_path + '/' + self.db_dict["history_path"]
-        self.weights_pattern = "epoch:{epoch:02d}-acc:{acc:." + str(self.sig_dig) +\
-            "f}-val_acc:{val_acc:." + str(self.sig_dig) + "f}.hdf5"
-
+        self.weights_pattern = "epoch:{epoch:02d}-accuracy:{accuracy:." + str(self.sig_dig) +\
+            "f}-val_accuracy:{val_accuracy:." + str(self.sig_dig) + "f}.hdf5"
     def prepare_data(self):
         """Get data from dataset and assemble as 4D input tensor for a keras model.
 
@@ -216,12 +215,12 @@ class DeepConvLstm(object):
         x_test = x_all[test_idx, :, :, :]
         return (x_train, y_train, x_test, y_test)
 
-    def load_pretrained(self, model, metric="val_acc"):
+    def load_pretrained(self, model, metric="val_accuracy"):
         """Return a model with the best pretrained weights from a folder, if it exists.
 
         Arguments:
             model (:obj:`kerasModel`): model with basic structure
-            metric (:obj:`str`, optional, *default*=val_acc): metric to use
+            metric (:obj:`str`, optional, *default*=val_accuracy): metric to use
                 as comparision
 
         Returns:
@@ -283,7 +282,7 @@ class DeepConvLstm(object):
         sub_data = self.prepare_data()
         input_shape = sub_data[0].shape
         model, callbacks_list = self.get_model(input_shape[1:])
-        res = self.load_pretrained(model, "val_acc")
+        res = self.load_pretrained(model, "val_accuracy")
         if res[0]:
             initial_epoch = res[1]
             LOGGER.debug("Using pre-trained weights... resuming from epoch {}".
@@ -296,7 +295,7 @@ class DeepConvLstm(object):
                          batch_size=self.batch_size, validation_split=0.33,
                          callbacks=callbacks_list, verbose=1,
                          initial_epoch=initial_epoch)
-        wfile, epoch = best_weight(w_folder, "val_acc", "subject:{}".
+        wfile, epoch = best_weight(w_folder, "val_accuracy", "subject:{}".
                                    format(self.subject), self.sig_dig)
         LOGGER.debug("Best results from epoch {}, saved in file {}".
                      format(epoch, wfile))
