@@ -239,7 +239,7 @@ class DeepConvLstm(object):
         model.load_weights(weight_file)
         return (model, epoch)
 
-    def get_model(self, input_shape):
+    def get_model(self, input_shape, **kwargs):
         """Return a deepconvlsm model with the best pretrained weights from a folder if it exists.
 
         Arguments:
@@ -254,7 +254,7 @@ class DeepConvLstm(object):
         file_weights = self.db_dict["weights_path"]+"/weights--{}--".format(subn) +\
             self.weights_pattern
         model = dcl.model_deepconvlstm(input_shape, class_number=self.n_classes,
-                                       learn_rate=self.learn_rate)
+                                       learn_rate=self.learn_rate, **kwargs)
         checkpoint = ModelCheckpoint(file_weights, verbose=1, monitor=self.monitor,
                                      save_best_only=True, mode="max")
         tensorboard = TensorBoard(log_dir=self.db_dict["log_dir"]+"{}".format(
@@ -267,7 +267,7 @@ class DeepConvLstm(object):
         callbacks_list = [checkpoint, tensorboard, early_stopping, reduce_lr]
         return (model, callbacks_list)
 
-    def run_training(self):
+    def run_training(self, **kwargs):
         """Train the deepconvlstm model, given a dataset.
 
         """
@@ -282,7 +282,7 @@ class DeepConvLstm(object):
         LOGGER.info("Running training for subject {}...".format(self.subject))
         sub_data = self.prepare_data()
         input_shape = sub_data[0].shape
-        model, callbacks_list = self.get_model(input_shape[1:])
+        model, callbacks_list = self.get_model(input_shape[1:], **kwargs)
         res = self.load_pretrained(model, "val_accuracy")
         if res[0]:
             initial_epoch = res[1]
