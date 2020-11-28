@@ -250,20 +250,36 @@ class DeepConvLstm(object):
                 or None if no file could be found
 
         """
+        def_args = {
+            "early_patience": 20,
+            "plateau_patience": 5,
+            "profile_batch": 2,
+            "save_best_only": True,
+            "checkpoint_mode": "max",
+            "min_lr": 0.001,
+            "lr_factor": 0.2,
+            "write_images": True          
+        }
+        def_args.update(kwargs)
         subn = "subject:{}".format(self.subject) if self.subject else "all"
         file_weights = self.db_dict["weights_path"]+"/weights--{}--".format(subn) +\
             self.weights_pattern
         model = dcl.model_deepconvlstm(input_shape, class_number=self.n_classes,
                                        learn_rate=self.learn_rate, **kwargs)
         checkpoint = ModelCheckpoint(file_weights, verbose=1, monitor=self.monitor,
-                                     save_best_only=True, mode="max")
+                                     save_best_only=def_args["save_best_only"],
+                                     mode=def_args["checkpoint_mode"])
         tensorboard = TensorBoard(log_dir=self.db_dict["log_dir"]+"{}".format(
                                   time.strftime("%d/%m/%Y--%H:%M:%S")),
-                                  profile_batch=2,
-                                  write_images=True)
-        early_stopping = EarlyStopping(monitor=self.monitor, patience=20, verbose=1)
-        reduce_lr = ReduceLROnPlateau(monitor=self.monitor, factor=0.2,
-                                      patience=5, min_lr=0.001)
+                                  profile_batch=def_args["profile_batch"],
+                                  write_images=def_args["write_images"])
+        early_stopping = EarlyStopping(monitor=self.monitor,
+                                       patience=def_args["early_patience"],
+                                       verbose=1)
+        reduce_lr = ReduceLROnPlateau(monitor=self.monitor,
+                                      factor=def_args["lr_factor"],
+                                      patience=def_args["plateau_patience"],
+                                      min_lr=def_args["min_lr"])
         callbacks_list = [checkpoint, tensorboard, early_stopping, reduce_lr]
         return (model, callbacks_list)
 
