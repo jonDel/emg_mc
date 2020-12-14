@@ -331,8 +331,8 @@ class DeepConvLstm(object):
             pickle.dump(hist.history, fname)
         preds_train = model.evaluate(sub_data[0], sub_data[1])
         LOGGER.info("Train Accuracy = " + str(preds_train[1]))
-        test_accuracy = model.evaluate(sub_data[2], sub_data[3])
-        LOGGER.info("Test Accuracy = " + str(preds_test[1]))
+        test_accuracy = model.evaluate(sub_data[2], sub_data[3])[1]
+        LOGGER.info("Test Accuracy = " + str(test_accuracy))
         return training_time, test_accuracy
 
 
