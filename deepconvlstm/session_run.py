@@ -10,6 +10,7 @@ import json
 import pickle
 from pathlib import Path
 import numpy as np
+import tensorflow as tf
 from keras.callbacks import ModelCheckpoint, TensorBoard, EarlyStopping, ReduceLROnPlateau
 import keras.backend as K
 import nina_helper as nh
@@ -335,6 +336,7 @@ class DeepConvLstm(object):
         with open(filehistname, "wb") as fname:
             pickle.dump(hist.history, fname)
         preds_train = model.evaluate(sub_data[0], sub_data[1])
+        confusion_matrix = tf.math.confusion_matrix(sub_data[0], sub_data[1]) 
         LOGGER.info("Train Accuracy = " + str(preds_train[1]))
         test_accuracy = model.evaluate(sub_data[2], sub_data[3])[1]
         LOGGER.info("Test Accuracy = " + str(test_accuracy))
@@ -345,7 +347,7 @@ class DeepConvLstm(object):
             profile_summary = mem_prof['memoryProfilePerAllocator']['GPU_0_bfc']['profileSummary']
         else:
             profile_summary = {}
-        return training_time, test_accuracy, profile_summary
+        return training_time, test_accuracy, profile_summary, confusion_matrix
 
 
 def run_dbtraining(database):
