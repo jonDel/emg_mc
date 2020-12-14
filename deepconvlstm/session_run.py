@@ -339,7 +339,7 @@ class DeepConvLstm(object):
         if memory_profile:
             with gzip.open(memory_profile, 'rb') as f:
                 mem_prof = json.loads(f.read())
-            profile_summary = memory_profile['memoryProfilePerAllocator']['GPU_0_bfc']['profileSummary']
+            profile_summary = mem_prof['memoryProfilePerAllocator']['GPU_0_bfc']['profileSummary']
         else:
             profile_summary = {}
         return training_time, test_accuracy, profile_summary
