@@ -5,6 +5,8 @@ import os
 import logging
 from copy import deepcopy
 from glob import glob
+import gzip
+import json
 import pickle
 from pathlib import Path
 import numpy as np
@@ -333,7 +335,14 @@ class DeepConvLstm(object):
         LOGGER.info("Train Accuracy = " + str(preds_train[1]))
         test_accuracy = model.evaluate(sub_data[2], sub_data[3])[1]
         LOGGER.info("Test Accuracy = " + str(test_accuracy))
-        return training_time, test_accuracy
+        memory_profile = glob('**/*memory_profile.json.gz', recursive=True)[0]
+        if memory_profile:
+            with gzip.open(memory_profile, 'rb') as f:
+                mem_prof = json.loads(f.read())
+            profile_summary = memory_profile['memoryProfilePerAllocator']['GPU_0_bfc']['profileSummary']
+        else:
+            profile_summary = {}
+        return training_time, test_accuracy, profile_summary
 
 
 def run_dbtraining(database):
