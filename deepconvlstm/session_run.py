@@ -285,6 +285,12 @@ class DeepConvLstm(object):
 
     def run_training(self, **kwargs):
         """Train the deepconvlstm model, given a dataset.
+        Returns:        
+            db_dict: (:obj:`dict`, optional, *default* =DATABASES_DICT[database]): dictionary
+                containing useful information about the database (see DATABASES_DICT in
+                this module for reference)
+            training_time (:obj:`float`): time in seconds spent in training the model
+            test_accuracy (:obj:`float`): accuracy obtained in the test set after training the model
 
         """
         Path(self.db_dict["weights_path"]).mkdir(parents=True, exist_ok=True)
@@ -308,10 +314,12 @@ class DeepConvLstm(object):
         else:
             initial_epoch = 0
         model.summary()
+        init = time.time()
         hist = model.fit(sub_data[0], sub_data[1], epochs=self.epochs,
                          batch_size=self.batch_size, validation_split=0.33,
                          callbacks=callbacks_list, verbose=1,
                          initial_epoch=initial_epoch)
+        training_time = time.time() - init
         wfile, epoch = best_weight(w_folder, "val_accuracy", "subject:{}".
                                    format(self.subject), self.sig_dig)
         LOGGER.debug("Best results from epoch {}, saved in file {}".
@@ -323,8 +331,9 @@ class DeepConvLstm(object):
             pickle.dump(hist.history, fname)
         preds_train = model.evaluate(sub_data[0], sub_data[1])
         LOGGER.info("Train Accuracy = " + str(preds_train[1]))
-        preds_test = model.evaluate(sub_data[2], sub_data[3])
+        test_accuracy = model.evaluate(sub_data[2], sub_data[3])
         LOGGER.info("Test Accuracy = " + str(preds_test[1]))
+        return training_time, test_accuracy
 
 
 def run_dbtraining(database):
