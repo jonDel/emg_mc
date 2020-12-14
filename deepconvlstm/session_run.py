@@ -82,7 +82,7 @@ def best_weight(folder, metric, filehead, sig_dig, file_pattern=None):
     if not weights_list:
         return (False, None)
     b_weight = weights_list[0]
-    reg = re.compile("-"+metric+":(\d.\d{})".format(sig_dig))
+    reg = re.compile("-"+metric+":(\d.\d{{{}}})".format(sig_dig))
     try:
         for filename in weights_list:
             res = reg.search(filename)
