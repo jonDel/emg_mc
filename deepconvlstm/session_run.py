@@ -109,8 +109,9 @@ class DeepConvLstm(object):
             database (:obj:`str`): database number: database_1, database_2 or database_3
             timesteps_number (:obj:`int`, optional): number of time steps
                 for each sequence
-            train_split (:obj:`int`, optional): 1-10, proportion of test-train split,
+            train_split (:obj:`int`, optional, *default* =3): 1-10, proportion of test-train split,
                 based on number of repetitions (10) Ex: 3 indicates 30% of test samples
+            val_split (:obj:`float`, optional, *default* =0.33): validation split
             moves (:obj:`list`,optional, *default* =None): If given, the classes
                 used for the classifier will be only these ones; else, all classes
             class_number (:obj:`int`,optional): number of classes for classification task
@@ -140,7 +141,9 @@ class DeepConvLstm(object):
             "db_dict": deepcopy(DATABASES_DICT[database]),
             "sig_dig": 4,
             "epochs": 150,
+            "verbose": 1,
             "obs_window": 200,
+            "val_split": 0.33,
             "timeback_reach": 1.25,
             "monitor": "val_accuracy",
             "base_path": os.getcwd(),
@@ -318,8 +321,8 @@ class DeepConvLstm(object):
         model.summary()
         init = time.time()
         hist = model.fit(sub_data[0], sub_data[1], epochs=self.epochs,
-                         batch_size=self.batch_size, validation_split=0.33,
-                         callbacks=callbacks_list, verbose=1,
+                         batch_size=self.batch_size, validation_split=self.val_split,
+                         callbacks=callbacks_list, verbose=self.verbose,
                          initial_epoch=initial_epoch)
         training_time = time.time() - init
         wfile, epoch = best_weight(w_folder, "val_accuracy", "subject:{}".
