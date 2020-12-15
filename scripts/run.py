@@ -22,8 +22,8 @@ def run_training_iterations(subject, database, epochs, batch_size, subsamp_rate,
                        timeback_reach=0.25, batch_size=batch_size, subsamp_rate=subsamp_rate,
                        moves=moves)
     for n_iter in range(n_iterations):
-        os.system("rm -r results/logs/db1/*")
-        os.system("rm -r results/weights/db1/*")
+        os.system("rm -r results/logs/db{}/*".format(database[-1]))
+        os.system("rm -r results/weights/db{}/*".format(database[-1]))
         training_time, test_accuracy, profile_summary, conf_matrix = dcl.run_training(early_patience=early_patience)
         iteration_list.append({
             "training_time": training_time,
