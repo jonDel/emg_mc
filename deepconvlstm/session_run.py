@@ -336,15 +336,25 @@ class DeepConvLstm(object):
         with open(filehistname, "wb") as fname:
             pickle.dump(hist.history, fname)
         preds_train = model.evaluate(sub_data[0], sub_data[1])
-        confusion_matrix = tf.math.confusion_matrix(sub_data[0], sub_data[1]) 
+        predictions = tf.argmax(model.predict(sub_data[2]), 1)
+        true_labels = tf.argmax(sub_data[3], 1)
+        confusion_matrix = tf.math.confusion_matrix(true_labels, predictions) 
         LOGGER.info("Train Accuracy = " + str(preds_train[1]))
         test_accuracy = model.evaluate(sub_data[2], sub_data[3])[1]
         LOGGER.info("Test Accuracy = " + str(test_accuracy))
-        memory_profile = glob('**/*memory_profile.json.gz', recursive=True)[0]
+        mem_files = glob('**/*memory_profile.json.gz', recursive=True)
+        if mem_files:
+            memory_profile = mem_files[0]
+        else:
+            memory_profile = []
         if memory_profile:
             with gzip.open(memory_profile, 'rb') as f:
                 mem_prof = json.loads(f.read())
-            profile_summary = mem_prof['memoryProfilePerAllocator']['GPU_0_bfc']['profileSummary']
+            try:
+                profile_summary = mem_prof['memoryProfilePerAllocator']['GPU_0_bfc']['profileSummary']
+            except Exception as error:
+                print(error)
+                profile_summary = {}
         else:
             profile_summary = {}
         return training_time, test_accuracy, profile_summary, confusion_matrix
